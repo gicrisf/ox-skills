@@ -1,0 +1,11 @@
+; -*- mode: emacs-lisp; lexical-binding: t -*-
+
+;; Eldev configuration for ox-skills
+
+(eldev-use-package-archive 'gnu)
+
+;; Main project file
+(setf eldev-main-fileset '("ox-skills.el"))
+
+;; Test files
+(setf eldev-test-fileset '("test/ox-skills-test.el"))

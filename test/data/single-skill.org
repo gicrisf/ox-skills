@@ -1,0 +1,20 @@
+#+SKILL_NAME: example-skill
+#+SKILL_DESCRIPTION: An example skill for testing
+#+SKILL_WHEN_TO_USE: When you need an example
+#+SKILL_AGENT: tester
+
+* My First Skill
+
+This is the skill body.
+
+** A subsection
+
+More content here.
+
+#+begin_src sh :inject yes
+echo "hello world"
+#+end_src
+
+#+begin_src elisp
+(message "regular code block")
+#+end_src

@@ -1,0 +1,160 @@
+#+title: Ox-Skills
+#+author: Giovanni Crisalfi
+[[https://www.gnu.org/licenses/gpl-3.0][https://img.shields.io/badge/License-GPL%20v3-blue.svg]]
+
+Ox-skills is an Org exporter backend that exports Org files to SKILL.md files with YAML frontmatter.
+
+*Write your AI coding assistant skills in Org-mode.* Keep your prompt engineering in the same place as your notes, export with a single command, and never hand-edit YAML again.
+
+* Quick start
+
+Set =SKILL_BASE_DIR= to the directory where skills should be written, add =SKILL_*= keywords, and write the skill body:
+
+#+begin_src
+#+SKILL_NAME: review
+#+SKILL_DESCRIPTION: Review code changes in the current branch
+#+SKILL_ALLOWED_TOOLS: Bash Read
+#+SKILL_USER_INVOCABLE: true
+#+SKILL_BASE_DIR: ~/.claude/skills
+
+,* Instructions
+
+Focus on correctness, not style. Check for edge cases.
+
+,#+begin_src sh :inject yes
+git diff HEAD
+,#+end_src
+#+end_src
+
+Export with the Org export dispatcher (=M-x org-export-dispatch= or =C-c C-e=).
+The Skills backend appears under the =s= key:
+
+#+begin_example
+ [s] Export to SKILL.md
+     [s] File to SKILL.md
+     [S] File to a temporary buffer
+     [w] Subtree or File to SKILL.md
+     [a] All subtrees (or File) to SKILL.md
+#+end_example
+
+The skill is written to ={SKILL_BASE_DIR}/{SKILL_NAME}/SKILL.md= — in this example, =~/.claude/skills/review/SKILL.md=.
+
+** Dynamic context injection
+
+Source blocks with =:inject yes= become =```!= blocks, executed at invocation
+time to inject fresh context into the skill:
+
+#+begin_src
+,#+begin_src sh :inject yes
+git diff HEAD
+,#+end_src
+#+end_src
+
+Exports as:
+
+#+begin_example
+```!
+git diff HEAD
+```
+#+end_example
+
+Regular source blocks export as standard fenced code blocks.
+
+** Managing multiple skills
+
+Keep all your skills in one Org file. Give each heading an =EXPORT_SKILL_NAME=
+property, set a shared =SKILL_BASE_DIR=, then run =M-x ox-skills-export-wim-to-md=
+(or =C-c C-e s w=) to export all at once:
+
+#+begin_src org
+,#+SKILL_BASE_DIR: ~/.claude/skills
+
+,* Review skill
+:PROPERTIES:
+:EXPORT_SKILL_NAME: review
+:EXPORT_SKILL_DESCRIPTION: Review code changes
+:EXPORT_SKILL_ALLOWED_TOOLS: Bash Read
+:END:
+
+...
+
+,* Deploy skill
+:PROPERTIES:
+:EXPORT_SKILL_NAME: deploy
+:EXPORT_SKILL_DESCRIPTION: Deploy to production
+:END:
+
+...
+#+end_src
+
+This writes =~/.claude/skills/review/SKILL.md= and
+=~/.claude/skills/deploy/SKILL.md=.
+
+Set =SKILL_BASE_DIR= to wherever your tool expects skills — ox-skills writes
+directly into that directory, no subdirectory is appended automatically.
+
+** Keywords
+
+| Org keyword                      | YAML field                 | Type   |
+|----------------------------------+----------------------------+--------|
+| =SKILL_NAME=                     | =name=                     | string |
+| =SKILL_DESCRIPTION=              | =description=              | string |
+| =SKILL_WHEN_TO_USE=              | =when_to_use=              | string |
+| =SKILL_ARGUMENT_HINT=            | =argument-hint=            | string |
+| =SKILL_ARGUMENTS=                | =arguments=                | list   |
+| =SKILL_ALLOWED_TOOLS=            | =allowed-tools=            | list   |
+| =SKILL_DISABLE_MODEL_INVOCATION= | =disable-model-invocation= | bool   |
+| =SKILL_USER_INVOCABLE=           | =user-invocable=           | bool   |
+| =SKILL_MODEL=                    | =model=                    | string |
+| =SKILL_EFFORT=                   | =effort=                   | string |
+| =SKILL_CONTEXT=                  | =context=                  | string |
+| =SKILL_AGENT=                    | =agent=                    | string |
+| =SKILL_PATHS=                    | =paths=                    | list   |
+| =SKILL_SHELL=                    | =shell=                    | string |
+| =SKILL_BASE_DIR=                 | (output path only)         | —      |
+
+List fields are space-separated; quote multi-word items. Boolean fields accept =true=/=yes= or =false=/=no=. Subtree exports use =EXPORT_SKILL_*= property drawer syntax.
+
+* Installation
+
+** With Straight
+
+#+begin_src emacs-lisp
+(use-package ox-skills
+  :straight (:host github :repo "gicrisf/ox-skills"))
+#+end_src
+
+** With built-in =:vc= (Emacs 29+)
+
+#+begin_src emacs-lisp
+(use-package ox-skills
+  :vc (:url "https://github.com/gicrisf/ox-skills"
+            :rev :newest
+            :branch "main"))
+#+end_src
+
+** With Doom
+
+In =~/.config/doom/packages.el=:
+
+#+begin_src emacs-lisp
+(package! ox-skills :recipe (:host github :repo "gicrisf/ox-skills"))
+#+end_src
+
+In =~/.config/doom/config.el=:
+
+#+begin_src emacs-lisp
+(use-package! ox-skills)
+#+end_src
+
+Then run =doom sync=.
+
+* Donate
+
+Did you find this package useful? Buy me a coffee!
+
+[[https://ko-fi.com/V7V425BFU][https://ko-fi.com/img/githubbutton_sm.svg]]
+
+* License
+
+Open sourced under the [[./LICENSE][GPL-3.0 license]].

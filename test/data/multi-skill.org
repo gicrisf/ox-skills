@@ -1,0 +1,17 @@
+* Skill One
+:PROPERTIES:
+:EXPORT_SKILL_NAME: skill-one
+:EXPORT_SKILL_DESCRIPTION: First test skill
+:EXPORT_SKILL_AGENT: tester
+:END:
+
+This is skill one.
+
+* Skill Two
+:PROPERTIES:
+:EXPORT_SKILL_NAME: skill-two
+:EXPORT_SKILL_DESCRIPTION: Second test skill
+:EXPORT_SKILL_ALLOWED_TOOLS: bash read write
+:END:
+
+This is skill two.

@@ -456,6 +456,13 @@ Walk up the heading tree and return subdir strings, outermost first."
       (lambda () (throw 'found t))
       "EXPORT_SKILL_NAME<>\"\""))))
 
+(defun ox-skills--buffer-has-skill-p ()
+  "Return non-nil if the buffer has any skill metadata.
+Checks for a file-level SKILL_NAME keyword or any subtree with
+EXPORT_SKILL_NAME."
+  (or (org-collect-keywords '("SKILL_NAME"))
+      (ox-skills--buffer-has-valid-subtree-p)))
+
 (defun ox-skills--get-valid-subtree ()
   "Return point of nearest subtree with EXPORT_SKILL_NAME at or above point.
 Walk up from the current heading.  Return the point or nil."
@@ -514,6 +521,8 @@ that has an EXPORT_SKILL_NAME property.
 ASYNC means the export process should happen asynchronously.
 VISIBLE-ONLY means only export visible parts of the subtrees."
   (interactive "P")
+  (unless (ox-skills--buffer-has-skill-p)
+    (user-error "No skill metadata found — add SKILL_NAME or EXPORT_SKILL_NAME"))
   (let ((buf-has-subtree (ox-skills--buffer-has-valid-subtree-p)))
     (cond
      ((and buf-has-subtree all-subtrees)
@@ -540,6 +549,21 @@ VISIBLE-ONLY means only export visible parts of the subtrees."
           (ox-skills-export-to-md async nil visible-only))))
      (t
       (ox-skills-export-to-md async nil visible-only)))))
+
+;;; Dispatcher Integration
+
+(defun ox-skills--dispatch-filter (orig-fn &rest args)
+  "Hide the skills backend from the export dispatcher when no metadata is present.
+ORIG-FN is the original `org-export-dispatch'; ARGS are its arguments."
+  (if (ox-skills--buffer-has-skill-p)
+      (apply orig-fn args)
+    (let ((org-export-registered-backends
+           (cl-remove-if (lambda (b)
+                           (eq (org-export-backend-name b) 'skills))
+                         org-export-registered-backends)))
+      (apply orig-fn args))))
+
+(advice-add 'org-export-dispatch :around #'ox-skills--dispatch-filter)
 
 (provide 'ox-skills)
 

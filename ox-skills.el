@@ -118,10 +118,9 @@ Accepts the Elisp booleans t and nil, and the strings
    (t "true")))
 
 (defun ox-skills--yaml-quote-string (str)
-  "Quote STR for YAML output."
+  "Quote STR as an inline YAML string value."
   (if (or (null str) (string-empty-p str))
       "\"\""
-    ;; Check if string needs quoting
     (let ((needs-quote (or (string-match-p "[][\n\":{}\\,&*#?|<>=!%@`]" str)
                            (string-match-p "^[ \t]\\|[ \t]$" str)
                            (member (downcase str) '("true" "false" "yes" "no" "null")))))
@@ -136,11 +135,36 @@ Accepts the Elisp booleans t and nil, and the strings
                   "\"")
         str))))
 
+(defun ox-skills--yaml-fold-string (str indent)
+  "Return STR as a YAML folded block scalar indented by INDENT spaces."
+  (let* ((fill-width (- 78 indent))
+         (pad (make-string indent ?\s))
+         (words (split-string (string-trim str) nil t))
+         lines current)
+    (dolist (word words)
+      (cond
+       ((null current) (setq current word))
+       ((<= (+ (length current) 1 (length word)) fill-width)
+        (setq current (concat current " " word)))
+       (t (push current lines) (setq current word))))
+    (when current (push current lines))
+    (concat ">\n"
+            (mapconcat (lambda (l) (concat pad l)) (nreverse lines) "\n"))))
+
+(defun ox-skills--yaml-encode-string (str)
+  "Encode STR as a YAML string field value.
+Long strings or strings containing quotes use a folded block scalar."
+  (cond
+   ((or (null str) (string-empty-p str)) "\"\"")
+   ((or (> (length str) 76) (string-match-p "\"" str))
+    (ox-skills--yaml-fold-string str 2))
+   (t (ox-skills--yaml-quote-string str))))
+
 (defun ox-skills--yaml-encode-value (value field-type)
   "Encode VALUE according to FIELD-TYPE for YAML output.
 FIELD-TYPE is one of: string, bool, list."
   (pcase field-type
-    ('string (ox-skills--yaml-quote-string value))
+    ('string (ox-skills--yaml-encode-string value))
     ('bool (ox-skills--parse-bool value))
     ('list
      (let ((items (if (listp value) value (ox-skills--parse-list value))))
@@ -204,6 +228,65 @@ Otherwise, delegate to parent ox-md transcoder."
       ;; Default: use standard markdown code block
       (concat "```" (or lang "") "\n" (org-trim code) "\n```"))))
 
+;;; Additional Transcoders
+
+(defun ox-skills--example-block (example-block _contents _info)
+  "Transcode EXAMPLE-BLOCK to a fenced code block."
+  (concat "```\n"
+          (org-trim (org-element-property :value example-block))
+          "\n```"))
+
+(defun ox-skills--quote-block (_quote-block contents _info)
+  "Transcode QUOTE-BLOCK to a Markdown blockquote.
+CONTENTS is the already-transcoded block body."
+  (let ((lines (split-string (string-trim-right contents) "\n")))
+    (concat
+     (mapconcat (lambda (l)
+                  (if (string-empty-p (string-trim l)) ">" (concat "> " l)))
+                lines "\n")
+     "\n")))
+
+(defun ox-skills--table (table _contents info)
+  "Transcode TABLE to a Markdown pipe table.
+INFO is the export communication channel."
+  (let (header-rows body-rows in-body)
+    (org-element-map table 'table-row
+      (lambda (row)
+        (if (eq (org-element-property :type row) 'rule)
+            (setq in-body t)
+          (let ((cells (org-element-map row 'table-cell
+                         (lambda (cell)
+                           (org-trim
+                            (org-export-data (org-element-contents cell) info)))
+                         info)))
+            (if in-body (push cells body-rows) (push cells header-rows)))))
+      info)
+    (setq header-rows (nreverse header-rows)
+          body-rows (nreverse body-rows))
+    (unless in-body
+      (setq body-rows (cdr header-rows)
+            header-rows (list (car header-rows))))
+    (let* ((n-cols (length (car header-rows)))
+           (row-str (lambda (cells)
+                      (concat "| " (mapconcat #'identity cells " | ") " |")))
+           (sep (concat "|" (mapconcat (lambda (_) "---")
+                                       (make-list n-cols nil) "|") "|")))
+      (concat
+       (mapconcat row-str header-rows "\n") "\n"
+       sep "\n"
+       (when body-rows (concat (mapconcat row-str body-rows "\n") "\n"))))))
+
+;;; Final Output Filter
+
+(defun ox-skills--final-output-filter (output _backend _info)
+  "Normalize whitespace in OUTPUT after full export."
+  ;; Collapse 3+ consecutive blank lines to one blank line
+  (let ((result (replace-regexp-in-string "\n\n\n+" "\n\n" output)))
+    ;; Fix list bullets: ox-md emits "-   " and "N.  " — trim to "- " and "N. "
+    (setq result (replace-regexp-in-string "\n\\( *\\)-   " "\n\\1- " result))
+    (setq result (replace-regexp-in-string "\n\\( *[0-9]+\\.\\)  " "\n\\1 " result))
+    result))
+
 ;;; Template
 
 (defun ox-skills--template (contents info)
@@ -223,11 +306,18 @@ INFO is the export info plist."
         (?a "All subtrees (or File) to SKILL.md"
             (lambda (a _s v _b)
               (ox-skills-export-wim-to-md :all-subtrees a v)))))
+  :filters-alist '((:filter-final-output . ox-skills--final-output-filter))
   :translate-alist
   '((template . ox-skills--template)
-    (src-block . ox-skills--src-block))
+    (src-block . ox-skills--src-block)
+    (example-block . ox-skills--example-block)
+    (quote-block . ox-skills--quote-block)
+    (table . ox-skills--table))
   :options-alist
-  '((:skill-name "SKILL_NAME" nil nil nil)
+  '((:with-toc nil "toc" nil)
+    (:with-smart-quotes nil "'" nil)
+    (:with-special-strings nil "-" nil)
+    (:skill-name "SKILL_NAME" nil nil nil)
     (:skill-description "SKILL_DESCRIPTION" nil nil nil)
     (:skill-when-to-use "SKILL_WHEN_TO_USE" nil nil nil)
     (:skill-argument-hint "SKILL_ARGUMENT_HINT" nil nil nil)
@@ -372,6 +462,7 @@ Walk up from the current heading.  Return the point or nil."
 VISIBLE-ONLY means only export visible parts of the subtree.
 Return the output file path."
   (let* ((ext-plist (ox-skills--subtree-plist))
+         ;; subtreep=t here so org reads EXPORT_SKILL_* from the heading for the output path
          (info (org-combine-plists
                 (org-export-get-environment 'skills t)
                 ext-plist
@@ -382,7 +473,8 @@ Return the output file path."
       (make-directory outdir t))
     (save-restriction
       (org-narrow-to-subtree)
-      (let ((contents (org-export-as 'skills t visible-only nil ext-plist)))
+      ;; subtreep=nil so the root heading exports as h1 and children as h2
+      (let ((contents (org-export-as 'skills nil visible-only nil ext-plist)))
         (with-temp-file outfile
           (insert contents))))
     outfile))

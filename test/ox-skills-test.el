@@ -105,6 +105,40 @@
         (should (string-match "```elisp" result))
         (should (string-match "(message \"hi\")" result))))))
 
+;;; Example Block Transcoder
+
+(ert-deftest ox-skills-test-example-block ()
+  "Test that example blocks produce fenced code blocks."
+  (with-temp-buffer
+    (org-mode)
+    (insert "#+begin_example\nsome text\n#+end_example")
+    (let* ((tree (org-element-parse-buffer))
+           (block (org-element-map tree 'example-block #'identity nil t)))
+      (let ((result (ox-skills--example-block block nil nil)))
+        (should (string-prefix-p "```" result))
+        (should (string-match "some text" result))
+        (should (string-suffix-p "```" (string-trim result)))))))
+
+;;; Quote Block Transcoder
+
+(ert-deftest ox-skills-test-quote-block ()
+  "Test that quote blocks produce Markdown blockquotes."
+  (let ((result (ox-skills--quote-block nil "line one\nline two\n" nil)))
+    (should (string-match "^> line one" result))
+    (should (string-match "^> line two" result))))
+
+;;; Table Transcoder
+
+(ert-deftest ox-skills-test-table ()
+  "Test that org tables produce Markdown pipe tables."
+  (with-temp-buffer
+    (org-mode)
+    (insert "| A | B |\n|---+---|\n| 1 | 2 |")
+    (let ((result (org-export-as 'skills nil nil t)))
+      (should (string-match "| A | B |" result))
+      (should (string-match "|---|" result))
+      (should (string-match "| 1 | 2 |" result)))))
+
 ;;; List Parsing
 
 (ert-deftest ox-skills-test-parse-list ()

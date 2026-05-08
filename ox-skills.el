@@ -200,14 +200,17 @@ FIELD-TYPE is one of: string, bool, list."
 
 (defun ox-skills--output-path (info)
   "Compute output path from export INFO plist.
-Returns {base-dir}/{name}/SKILL.md"
+Returns {base-dir}/{subdirs}/{name}/SKILL.md"
   (let* ((base-dir (or (plist-get info :skill-base-dir)
                        ox-skills-default-base-dir
                        (file-name-directory (plist-get info :input-file))
                        default-directory))
          (name (or (plist-get info :skill-name)
-                   (file-name-base (or (plist-get info :input-file) "skill")))))
-    (expand-file-name (concat name "/SKILL.md") base-dir)))
+                   (file-name-base (or (plist-get info :input-file) "skill"))))
+         (subdirs (plist-get info :skill-subdirs))
+         (subdir-prefix (when subdirs
+                          (concat (mapconcat #'identity subdirs "/") "/"))))
+    (expand-file-name (concat subdir-prefix name "/SKILL.md") base-dir)))
 
 ;;; Source Block Transcoder
 
@@ -434,6 +437,17 @@ Return output file's name."
         (setq plist (plist-put plist :skill-base-dir base-dir))))
     plist))
 
+(defun ox-skills--collect-subdirs ()
+  "Collect EXPORT_SKILL_SUBDIR values from ancestors of current heading.
+Walk up the heading tree and return subdir strings, outermost first."
+  (let (subdirs)
+    (save-excursion
+      (while (org-up-heading-safe)
+        (let ((subdir (org-entry-get nil "EXPORT_SKILL_SUBDIR")))
+          (when subdir
+            (push subdir subdirs)))))
+    subdirs))
+
 (defun ox-skills--buffer-has-valid-subtree-p ()
   "Return non-nil if buffer has at least one subtree with EXPORT_SKILL_NAME."
   (org-with-wide-buffer
@@ -462,6 +476,10 @@ Walk up from the current heading.  Return the point or nil."
 VISIBLE-ONLY means only export visible parts of the subtree.
 Return the output file path."
   (let* ((ext-plist (ox-skills--subtree-plist))
+         (subdirs (ox-skills--collect-subdirs))
+         (ext-plist (if subdirs
+                        (plist-put ext-plist :skill-subdirs subdirs)
+                      ext-plist))
          ;; subtreep=t here so org reads EXPORT_SKILL_* from the heading for the output path
          (info (org-combine-plists
                 (org-export-get-environment 'skills t)

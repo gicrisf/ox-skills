@@ -93,6 +93,53 @@ This writes =~/.claude/skills/review/SKILL.md= and
 Set =SKILL_BASE_DIR= to wherever your tool expects skills — ox-skills writes
 directly into that directory, no subdirectory is appended automatically.
 
+** Subdirectory sections
+
+Organise skills into subdirectories by declaring section headings with =EXPORT_SKILL_SUBDIR=. When WIM export runs on a skill below a section, each ancestor's =EXPORT_SKILL_SUBDIR= value becomes a path segment:
+
+#+begin_src org
+,#+SKILL_BASE_DIR: ~/.claude/skills
+
+,* Engineering
+:PROPERTIES:
+:EXPORT_SKILL_SUBDIR: engineering
+:END:
+
+,** Tools
+:PROPERTIES:
+:EXPORT_SKILL_SUBDIR: tools
+:END:
+
+,*** Code Review
+:PROPERTIES:
+:EXPORT_SKILL_NAME: code-review
+:EXPORT_SKILL_DESCRIPTION: Review code changes
+:END:
+
+...
+#+end_src
+
+This produces:
+
+#+begin_example
+~/.claude/skills/
+└── engineering/
+    └── tools/
+        └── code-review/
+            └── SKILL.md
+#+end_example
+
+In general, =~/.claude/skills/engineering/tools/code-review/SKILL.md=.
+
+Section headings without =EXPORT_SKILL_NAME= are not exported themselves — they
+only contribute their =EXPORT_SKILL_SUBDIR= segment to the paths of any skills
+nested beneath them. Sections can be nested to any depth.
+
+This is purely an organisational convenience: harnesses like Claude Code and
+OpenCode discover skills by scanning all subdirectories under the skills root,
+so a skill at =engineering/tools/code-review/SKILL.md= is found just as
+reliably as one at =code-review/SKILL.md=.
+
 ** Keywords
 
 | Org keyword                      | YAML field                 | Type   |

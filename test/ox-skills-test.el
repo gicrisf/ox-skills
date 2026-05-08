@@ -165,6 +165,15 @@
     (should (equal "/tmp/test/example/SKILL.md"
                    (ox-skills--output-path info)))))
 
+(ert-deftest ox-skills-test-output-path-with-subdir ()
+  "Test output path with subdirectory segments from ancestor sections."
+  (let ((info (list :skill-base-dir "/tmp/test"
+                    :skill-name "my-skill"
+                    :skill-subdirs '("engineering" "tools")
+                    :input-file "/some/path/example.org")))
+    (should (equal "/tmp/test/engineering/tools/my-skill/SKILL.md"
+                   (ox-skills--output-path info)))))
+
 ;;; Single-Skill Export (File-Based)
 
 (ert-deftest ox-skills-test-export-to-file ()

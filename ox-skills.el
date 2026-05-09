@@ -216,9 +216,8 @@ Returns {base-dir}/{subdirs}/{name}/SKILL.md"
 
 (defun ox-skills--src-block (src-block _contents _info)
   "Transcode SRC-BLOCK element to Markdown.
-SRC-BLOCK is the Org element to transcode.
-If the block has `:inject yes' header argument, output ```! block.
-Otherwise, delegate to parent ox-md transcoder."
+If the block has `:inject yes' header argument, output a ```! block.
+Otherwise, output a standard fenced code block."
   (let* ((lang (org-element-property :language src-block))
          (code (org-element-property :value src-block))
          (params (org-element-property :parameters src-block))
@@ -227,9 +226,7 @@ Otherwise, delegate to parent ox-md transcoder."
                           (val (cdr (assq :inject args))))
                      (and val (member (format "%s" val) '("yes" "t" "true")))))))
     (if inject
-        ;; Output ```! block for dynamic injection
         (concat "```!\n" (org-trim code) "\n```")
-      ;; Default: use standard markdown code block
       (concat "```" (or lang "") "\n" (org-trim code) "\n```"))))
 
 ;;; Additional Transcoders
@@ -372,9 +369,10 @@ Export is done in a buffer named \"*Org Skills Export*\", which will
 be displayed when `org-export-show-temporary-export-buffer' is
 non-nil."
   (interactive)
-  (org-export-to-buffer 'skills "*Org Skills Export*"
-    async subtreep visible-only body-only ext-plist
-    (lambda () (when (fboundp 'markdown-mode) (markdown-mode)))))
+  (let ((org-export-use-babel nil))
+    (org-export-to-buffer 'skills "*Org Skills Export*"
+      async subtreep visible-only body-only ext-plist
+      (lambda () (when (fboundp 'markdown-mode) (markdown-mode))))))
 
 ;;;###autoload
 (defun ox-skills-export-to-md (&optional async subtreep visible-only body-only ext-plist)
@@ -405,7 +403,8 @@ file-local settings.
 
 Return output file's name."
   (interactive)
-  (let* ((info (org-combine-plists
+  (let* ((org-export-use-babel nil)
+         (info (org-combine-plists
                 (org-export-get-environment 'skills subtreep)
                 ext-plist
                 (list :input-file (buffer-file-name))))
@@ -502,7 +501,8 @@ Return the output file path."
     (save-restriction
       (org-narrow-to-subtree)
       ;; subtreep=nil so the root heading exports as h1 and children as h2
-      (let ((contents (org-export-as 'skills nil visible-only nil ext-plist)))
+      (let* ((org-export-use-babel nil)
+             (contents (org-export-as 'skills nil visible-only nil ext-plist)))
         (with-temp-file outfile
           (insert contents))))
     outfile))

@@ -305,7 +305,9 @@ INFO is the export info plist."
   '(?s "Export to SKILL.md"
        ((?s "File to SKILL.md" ox-skills-export-to-md)
         (?S "File to a temporary buffer" ox-skills-export-as-md)
-        (?w "Subtree or File to SKILL.md" ox-skills-export-wim-to-md)
+        (?w "Subtree or File to SKILL.md"
+            (lambda (a _s v _b)
+              (ox-skills-export-wim-to-md nil a v)))
         (?a "All subtrees (or File) to SKILL.md"
             (lambda (a _s v _b)
               (ox-skills-export-wim-to-md :all-subtrees a v)))))

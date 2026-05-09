@@ -222,7 +222,10 @@ Otherwise, delegate to parent ox-md transcoder."
   (let* ((lang (org-element-property :language src-block))
          (code (org-element-property :value src-block))
          (params (org-element-property :parameters src-block))
-         (inject (and params (string-match-p ":inject\\s-+\\(yes\\|t\\|true\\)" params))))
+         (inject (when params
+                   (let* ((args (org-babel-parse-header-arguments params))
+                          (val (cdr (assq :inject args))))
+                     (and val (member (format "%s" val) '("yes" "t" "true")))))))
     (if inject
         ;; Output ```! block for dynamic injection
         (concat "```!\n" (org-trim code) "\n```")

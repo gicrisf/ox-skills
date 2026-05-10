@@ -196,6 +196,17 @@ In =~/.config/doom/config.el=:
 
 Then run =doom sync=.
 
+* Real-world example
+
+For a real-world example, check out [[https://github.com/gicrisf/skills][gicrisf/skills]], a collection of AI agent skills exported from Org-mode with ox-skills. It demonstrates:
+
+- A =SKILLS.org= with multiple skills using ~EXPORT_SKILL_*~ properties
+- The WIM export workflow (=M-x ox-skills-export-wim-to-md=)
+- How to easily symlink skills into =~/.claude/skills=, =~/.opencode/skills=, etc.
+- A [[https://github.com/gicrisf/skills/tree/main/skills/meta/org-skill-maker][org-skill-maker]] meta-skill to bootstrap new skills interactively
+
+If you're just starting with org skills, use it as a reference or starting point.
+
 * Donate
 
 Did you find this package useful? Buy me a coffee!
